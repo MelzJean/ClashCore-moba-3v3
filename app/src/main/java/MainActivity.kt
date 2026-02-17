@@ -2,30 +2,55 @@ package com.MelzJean.ClashCore
 
 /**
  * The Heart of ClashCore.
- * This class manages the 5-minute match loop and hero states.
+ * Now modified to connect with Shop, Turrets, and Win Conditions.
  */
 class MainActivity {
-    var health: Int = 100
-    var isAlive: Boolean = true
-    var gold: Int = 0
+    // 1. Initialize the Hero (Using Bolt as an example)
+    val playerHero = Bolt()
     
-    // 5-minute match timer in seconds
-    var matchTimer: Int = 300 
+    // 2. Initialize Game Managers
+    val shop = ShopManager(playerHero)
+    val matchEnd = MatchEndLogic()
+    val turrets = TurretManager()
+    
+    var matchTimer: Int = 300 // 5-minute countdown
 
     fun startMatch() {
         println("Welcome to the Twisted Core. Match Starting!")
+        println("Playing as: ${playerHero.name} | Role: ${playerHero.role}")
     }
 
-    fun earnGold(amount: Int) {
-        gold += amount
-        println("Gold earned: $amount. Total Gold: $gold")
+    /**
+     * Simulation of a game tick (happens every second)
+     */
+    fun onGameTick() {
+        if (!matchEnd.isMatchActive) return
+
+        if (matchTimer > 0) {
+            matchTimer--
+            // Check win conditions periodically
+            // Here we pass dummy values, but in-game these would be real turret HPs
+            matchEnd.checkWinCondition(turrets.powerCore.hp, 7000) 
+        } else {
+            println("TIME UP! Sudden Death Overload initiated.")
+        }
     }
 
-    fun takeDamage(amount: Int) {
-        health -= amount
-        if (health <= 0) {
-            isAlive = false
-            println("Hero defeated! Respawning in 10 seconds...")
+    fun handleHeroKill() {
+        println("Enemy defeated!")
+        shop.addGold(200) // Reward for a hero kill
+    }
+
+    fun handleTakeTurretDamage() {
+        val damage = turrets.outerTurret.calculateDamage()
+        playerHero.hp -= damage
+        turrets.outerTurret.onTargetHit()
+        
+        println("Hit by Turret! Damage: $damage. Remaining HP: ${playerHero.hp}")
+        
+        if (playerHero.hp <= 0) {
+            println("Hero executed by Turret!")
+            turrets.outerTurret.resetTarget()
         }
     }
 }
